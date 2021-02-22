@@ -1,19 +1,45 @@
 """Bowling Score Calculator
+[TDD exercise]
 
-Get a string of one bowling game line: 10 frames
-Return score.
+Get a string of one bowling game line, and return score.
+Example: '20 00 X 1/ 03 04 00 00 00 70' should return: 46
 
-Example https://www.sportcalculators.com/bowling-score-calculator
+There are 10 pines you try to knock down in each frame.
+A strike - knock all 10 pins with the first ball.
+A spare - knock all 10 pins with the second ball (2 throws).
+Each games consists of ten frames. If you bowl a strike in the tenth frame,
+you get two more balls. If you throw a spare, you get one more ball.
+
+Scoring is based on the number of pins you knock down. However, if you bowl a
+spare, you get to add the pins in your next ball to that frame. For strikes,
+you get the next two balls.
+
+Line string has 10 (or 11) frames separated by a single space.
+Each frame has 2 (or 1) characters - one for each throw.
+The 1st can be a digit [0-9] or X to represent a strike.
+The 2nd can be a digit [0-9] or / to represent a spare.
+
+Example implementation:
+ https://www.sportcalculators.com/bowling-score-calculator
 [no need gor GUI]
 """
 import unittest
 import re
 import logging
 
-logging.basicConfig(format='%(asctime)-15s %(message)s', level=logging.DEBUG)
+logging.basicConfig(
+    format='[%(asctime)s.%(msecs)03d %(levelname)s] %(message)s',
+    datefmt='%H:%M:%S',
+    level=logging.INFO
+)
 
 
 def calculate_line_score(frames: list) -> int:
+    """Calculate score of one bowling game line.
+
+    :param frames: frames list of one bowling game line.
+    :return: bowling game line score.
+    """
     # logging.debug(f'frames: {frames}')
     frame_score = {}
     score = 0
@@ -22,7 +48,10 @@ def calculate_line_score(frames: list) -> int:
             first = 10 if frame[0] == 'X' else int(frame[0])
             frame_score[10] = {1: first, 2: 0, 'add': 0}
             if len(frame) == 2:
-                frame_score[10][2] = 10 if frame[1] == 'X' or frame[1] == '/' else int(frame[1])
+                if frame[1] == '/':
+                    frame_score[10][2] = 10 - int(frame[0])
+                else:
+                    frame_score[10][2] = 10 if frame[1] == 'X' else int(frame[1])
         elif frame.upper() == 'X':
             frame_score[i] = {1: 10, 2: 0, 'add': 2}
         elif frame[-1] == '/':
@@ -30,27 +59,45 @@ def calculate_line_score(frames: list) -> int:
         else:
             frame_score[i] = {1: int(frame[0]), 2: int(frame[1]), 'add': 0}
 
+    logging.debug(f'frame_score: {frame_score}')
     for i in range(10):
         score += frame_score[i][1] + frame_score[i][2]
+        logging.debug(f'\tFrame#{i} score(t1): {score}')
+
+        # handle spare/strike extra score.
         next_frame = i + 1
         next_try = 1
         if frame_score[i]['add'] >= 1:
             score += frame_score[next_frame][next_try]
+            logging.debug(f'\tFrame#{i} score(t2): {score}')
 
             if frame_score[i]['add'] == 2:
                 next_try = 2
-                # handle two strikes case
+                # handle extra frame case
                 if frame_score[next_frame][1] == 10:
                     next_try = 1
                     next_frame = next_frame if next_frame == 10 else next_frame + 1
+
+                score += frame_score[next_frame][next_try]
+                logging.debug(f'\tFrame#{i} score(t3): {score}')
+
+        logging.debug(f'\tFrame#{i} score: {score}')
 
     return score
 
 
 def get_bowling_line(line_str: str = '') -> list:
+    """Get bowling line from user, validate format and return as frames list.
+
+    :param line_str: bowling line string to substitute input.
+    :return: list of frames strings from the line.
+    """
     if line_str == '':
         line_str = input("Enter line's 10 frames: ")
-    if not re.match(r'\s*([0-9][0-9/]|X)( ([0-9][0-9/]|X)){9}( [0-9X][0-9/X]?)?', line_str):
+    if not re.match(
+            r'\s*([0-9][0-9/]|X)( ([0-9][0-9/]|X)){9}( [0-9X][0-9/X]?)?',
+            line_str
+    ):
         raise ValueError('Invalid line frames')
 
     return line_str.split()
@@ -69,7 +116,7 @@ def main():
         print(score)
 
 
-class Sanity(unittest.TestCase):
+class SanityTest(unittest.TestCase):
 
     # def test_zero(self):
     #     self.assertEqual(0, get_score('00 00 00 00 00 00 00 00 00 00'))
@@ -91,10 +138,14 @@ class Sanity(unittest.TestCase):
             ('12 4/ 20 X 35 X X 9/ 4/ X 81', 145),
             ('12 4/ 20 X 35 X X 9/ 4/ X 9/', 146)
         )
-        for i, case in enumerate(cases[:8]):
+        for i, case in enumerate(cases[:14]):
             with self.subTest(f'case#{i}: {case[0]} => {case[1]}'):
                 self.assertEqual(get_score(case[0]), case[1], f'string: {case[0]}')
-            logging.debug(f'Success - case#{i}: {case[0]} => {case[1]}')
+                logging.info(f'Success - case#{i}: {case[0]} => {case[1]}')
+
+    def test_invalid(self):
+        with self.assertRaises(ValueError):
+            score = get_score('bla')
 
 
 if __name__ == '__main__':
