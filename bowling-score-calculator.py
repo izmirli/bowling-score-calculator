@@ -1,6 +1,6 @@
-"""Bowling Score Calculator
-[TDD exercise]
+"""Bowling Score Calculator.
 
+[TDD exercise]
 Get a string of one bowling game line, and return score.
 Example: '20 00 X 1/ 03 04 00 00 00 70' should return: 46
 
@@ -20,7 +20,7 @@ The 1st can be a digit [0-9] or X to represent a strike.
 The 2nd can be a digit [0-9] or / to represent a spare.
 
 Example implementation:
- https://www.sportcalculators.com/bowling-score-calculator
+https://www.sportcalculators.com/bowling-score-calculator
 [no need gor GUI]
 """
 import unittest
@@ -40,26 +40,10 @@ def calculate_line_score(frames: list) -> int:
     :param frames: frames list of one bowling game line.
     :return: bowling game line score.
     """
-    # logging.debug(f'frames: {frames}')
-    frame_score = {}
     score = 0
-    for i, frame in enumerate(frames):
-        if i == 10:
-            first = 10 if frame[0] == 'X' else int(frame[0])
-            frame_score[10] = {1: first, 2: 0, 'add': 0}
-            if len(frame) == 2:
-                if frame[1] == '/':
-                    frame_score[10][2] = 10 - int(frame[0])
-                else:
-                    frame_score[10][2] = 10 if frame[1] == 'X' else int(frame[1])
-        elif frame.upper() == 'X':
-            frame_score[i] = {1: 10, 2: 0, 'add': 2}
-        elif frame[-1] == '/':
-            frame_score[i] = {1: int(frame[0]), 2: 10 - int(frame[0]), 'add': 1}
-        else:
-            frame_score[i] = {1: int(frame[0]), 2: int(frame[1]), 'add': 0}
-
+    frame_score = build_frame_score(frames)
     logging.debug(f'frame_score: {frame_score}')
+
     for i in range(10):
         score += frame_score[i][1] + frame_score[i][2]
         logging.debug(f'\tFrame#{i} score(t1): {score}')
@@ -86,6 +70,35 @@ def calculate_line_score(frames: list) -> int:
     return score
 
 
+def build_frame_score(frames: list) -> dict:
+    """Proccess frames and create enriched data structure for score calc.
+
+    :param frames: list of frames-strings from bowling results line.
+    :type frames: list
+    :return: dict with frame numbers keys, values are dicts with score data.
+    :rtype: dict
+    """
+    logging.debug(f'frames: {frames}')
+    frame_score = {}
+    for i, frame in enumerate(frames):
+        if i == 10:
+            first = 10 if frame[0] == 'X' else int(frame[0])
+            frame_score[10] = {1: first, 2: 0, 'add': 0}
+            if len(frame) == 2:
+                if frame[1] == '/':
+                    frame_score[10][2] = 10 - int(frame[0])
+                else:
+                    frame_score[10][2] = 10 if frame[1] == 'X' else int(frame[1])
+        elif frame.upper() == 'X':
+            frame_score[i] = {1: 10, 2: 0, 'add': 2}
+        elif frame[-1] == '/':
+            frame_score[i] = {1: int(frame[0]), 2: 10 - int(frame[0]), 'add': 1}
+        else:
+            frame_score[i] = {1: int(frame[0]), 2: int(frame[1]), 'add': 0}
+
+    return frame_score
+
+
 def get_bowling_line(line_str: str = '') -> list:
     """Get bowling line from user, validate format and return as frames list.
 
@@ -104,11 +117,13 @@ def get_bowling_line(line_str: str = '') -> list:
 
 
 def get_score(line_str: str) -> int:
+    """Get bowling result line from input & return its score."""
     line = get_bowling_line(line_str)
     return calculate_line_score(line)
 
 
 def main():
+    """Get a bowling result line (game), calculate score and prit it."""
     while True:
         # '12 4/ 20 X 35 X X 9/ 4/ X 9/' => 146
         line = get_bowling_line()
@@ -117,11 +132,10 @@ def main():
 
 
 class SanityTest(unittest.TestCase):
-
-    # def test_zero(self):
-    #     self.assertEqual(0, get_score('00 00 00 00 00 00 00 00 00 00'))
+    """Test the bowling score calc code."""
 
     def test_lines(self):
+        """Test defernt lines to be processed and their expected results."""
         cases = (
             ('00 00 00 00 00 00 00 00 00 00', 0),
             ('02 00 00 00 00 30 00 00 00 07', 12),
@@ -140,12 +154,15 @@ class SanityTest(unittest.TestCase):
         )
         for i, case in enumerate(cases[:14]):
             with self.subTest(f'case#{i}: {case[0]} => {case[1]}'):
-                self.assertEqual(get_score(case[0]), case[1], f'string: {case[0]}')
-                logging.info(f'Success - case#{i}: {case[0]} => {case[1]}')
+                self.assertEqual(
+                    get_score(case[0]), case[1], f'string: {case[0]}'
+                    )
+                logging.info(f'Success - case#{i}:\t{case[0]:33} => {case[1]}')
 
     def test_invalid(self):
+        """Test invalid score line format."""
         with self.assertRaises(ValueError):
-            score = get_score('bla')
+            get_score('bla')
 
 
 if __name__ == '__main__':
